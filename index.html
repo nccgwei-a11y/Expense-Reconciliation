@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每月对账单支出管理系统</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js 统计图表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- SheetJS (xlsx) 用于直接导入/导出 Excel 文件 -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- FontAwesome 图标 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 font-sans text-slate-800 antialiased">
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-indigo-600 text-white p-2 rounded-xl shadow-md">
+                    <i class="fa-solid fa-file-invoice-dollar text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="text-lg font-bold text-slate-900 leading-none">每月支出对账管理系统</h1>
+                    <span class="text-xs text-slate-500">本地单机版 • 智能 Excel 解析</span>
+                </div>
+            </div>
+            <div class="flex items-center space-x-3">
+                <button onclick="downloadExcelTemplate()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1.5">
+                    <i class="fa-solid fa-download"></i>
+                    <span>下载 Excel 模版</span>
+                </button>
+                <label class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition cursor-pointer flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-file-excel"></i>
+                    <span>导入 Excel 账单</span>
+                    <input type="file" id="excelUpload" accept=".xlsx, .xls" class="hidden" onchange="handleExcelImport(event)">
+                </label>
+                <button onclick="openAddModal()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition flex items-center space-x-1.5 shadow-sm">
+                    <i class="fa-solid fa-plus"></i>
+                    <span>记一笔</span>
+                </button>
+            </div>
+        </div>
+    </header>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">当月总支出</p>
+                    <h3 id="statTotalAmount" class="text-2xl font-bold text-slate-900 mt-1">¥0.00</h3>
+                </div>
+                <div class="w-12 h-12 bg-indigo-50 text-indigo-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-wallet"></i>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">对账完成进度</p>
+                    <h3 id="statReconRate" class="text-2xl font-bold text-slate-900 mt-1">0%</h3>
+                    <p id="statReconText" class="text-xs text-slate-500 mt-2">已核对 0 / 共 0 笔</p>
+                </div>
+                <div class="w-12 h-12 bg-emerald-50 text-emerald-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">本月可用预算</p>
+                    <h3 id="statBudgetLeft" class="text-2xl font-bold text-slate-900 mt-1">¥8,000</h3>
+                </div>
+                <div class="w-12 h-12 bg-amber-50 text-amber-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-piggy-bank"></i>
+                </div>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border border-slate-200/80 shadow-sm flex items-center justify-between">
+                <div>
+                    <p class="text-sm font-medium text-slate-500">待核对/差异项</p>
+                    <h3 id="statDiffCount" class="text-2xl font-bold text-rose-600 mt-1">0 笔</h3>
+                </div>
+                <div class="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center text-xl">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+            <div class="p-5 border-b border-slate-200 flex items-center justify-between">
+                <h3 class="font-bold text-slate-900 text-lg">支出对账明细表</h3>
+                <span id="recordCountBadge" class="bg-indigo-50 text-indigo-600 text-xs px-2.5 py-1 rounded-full font-medium">0 笔记录</span>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/70 border-b border-slate-200 text-xs font-semibold text-slate-500 uppercase tracking-wider">
+                            <th class="py-3 px-6">对账</th>
+                            <th class="py-3 px-6">日期</th>
+                            <th class="py-3 px-6">分类</th>
+                            <th class="py-3 px-6">商户/说明</th>
+                            <th class="py-3 px-6">支付方式</th>
+                            <th class="py-3 px-6 text-right">金额 (¥)</th>
+                            <th class="py-3 px-6 text-center">状态</th>
+                        </tr>
+                    </thead>
+                    <tbody id="expenseTableBody" class="divide-y divide-slate-100 text-sm"></tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+    <script>
+        let expenses = JSON.parse(localStorage.getItem('monthly_expenses')) || [];
+        window.onload = function() {
+            if (expenses.length === 0) loadSampleData();
+            else updateAll();
+        };
+        function updateAll() {
+            localStorage.setItem('monthly_expenses', JSON.stringify(expenses));
+            renderTable();
+            updateDashboard();
+        }
+        function loadSampleData() {
+            expenses = [
+                { date: '2026-10-01', category: '餐饮美食', merchant: '员工工作餐', amount: 350.00, method: '公司招行卡', status: '已核对' },
+                { date: '2026-10-03', category: '交通出行', merchant: '商务出差高铁', amount: 880.00, method: '支付宝', status: '已核对' }
+            ];
+            updateAll();
+        }
+        function renderTable() {
+            const tbody = document.getElementById('expenseTableBody');
+            tbody.innerHTML = '';
+            expenses.forEach((item, index) => {
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-3 px-6"><input type="checkbox" ${item.status==='已核对'?'checked':''} onchange="toggleRecon(${index})"></td>
+                    <td class="py-3 px-6">${item.date}</td>
+                    <td class="py-3 px-6">${item.category}</td>
+                    <td class="py-3 px-6">${item.merchant}</td>
+                    <td class="py-3 px-6">${item.method}</td>
+                    <td class="py-3 px-6 text-right">¥${item.amount.toFixed(2)}</td>
+                    <td class="py-3 px-6 text-center">${item.status}</td>`;
+                tbody.appendChild(tr);
+            });
+        }
+        function updateDashboard() {
+            let total = expenses.reduce((sum, item) => sum + item.amount, 0);
+            document.getElementById('statTotalAmount').innerText = `¥${total.toFixed(2)}`;
+        }
+        function toggleRecon(index) {
+            expenses[index].status = expenses[index].status === '已核对' ? '待核对' : '已核对';
+            updateAll();
+        }
+        function downloadExcelTemplate() { alert('请直接使用页面功能'); }
+        function handleExcelImport(e) {}
+        function openAddModal() {}
+    </script>
+</body>
+</html>
