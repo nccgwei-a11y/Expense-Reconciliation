@@ -1,0 +1,13 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "協發管理系统",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "協發系统",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "id": "/Expense-Reconciliation/",
+  "description": "用于本地化管理与核对每月支出的 Web 应用"
+}
