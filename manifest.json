@@ -8,13 +8,13 @@
   "theme_color": "#ffffff",
   "icons": [
     {
-      "src": "Square192x192Logo.scale-100.png",
-      "sizes": "192x192",
+      "src": "Square44x44Logo.altform-lightunplated_targetsize-40.png",
+      "sizes": "44x44",
       "type": "image/png"
     },
     {
-      "src": "Square512x512Logo.scale-100.png",
-      "sizes": "512x512",
+      "src": "Square150x150Logo.scale-200.png",
+      "sizes": "150x150",
       "type": "image/png"
     }
   ]
